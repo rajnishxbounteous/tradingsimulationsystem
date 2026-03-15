@@ -9,6 +9,13 @@ import java.util.Optional;
 @Repository
 public interface StockRepository extends JpaRepository<Stock, Long> {
 
-    // Find stock by symbol (e.g., TCS, INFY)
+    /**
+     * Find a stock by its symbol.
+     */
     Optional<Stock> findBySymbol(String symbol);
+
+    /**
+     * Check if a stock exists by its symbol.
+     */
+    boolean existsBySymbol(String symbol);
 }

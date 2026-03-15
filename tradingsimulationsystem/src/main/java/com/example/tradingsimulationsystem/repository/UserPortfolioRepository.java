@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface UserPortfolioRepository extends JpaRepository<UserPortfolio, Long> {
@@ -15,5 +16,5 @@ public interface UserPortfolioRepository extends JpaRepository<UserPortfolio, Lo
     List<UserPortfolio> findByUser(User user);
 
     // Find portfolio entry for a specific user and stock
-    UserPortfolio findByUserAndStock(User user, Stock stock);
+    Optional<UserPortfolio> findByUserAndStock(User user, Stock stock);
 }

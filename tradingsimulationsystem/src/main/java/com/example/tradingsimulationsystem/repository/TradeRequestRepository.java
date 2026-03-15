@@ -1,4 +1,4 @@
-package com.example.c.repository;
+package com.example.tradingsimulationsystem.repository;
 
 import com.example.tradingsimulationsystem.domain.TradeRequest;
 import com.example.tradingsimulationsystem.domain.User;

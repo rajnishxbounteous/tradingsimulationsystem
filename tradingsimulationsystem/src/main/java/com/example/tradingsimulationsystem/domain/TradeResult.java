@@ -13,12 +13,12 @@ public class TradeResult {
 
     // Buyer
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "buyer_id", nullable = false)
+    @JoinColumn(name = "buyer_id")
     private User buyer;
 
     // Seller
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "seller_id", nullable = false)
+    @JoinColumn(name = "seller_id")
     private User seller;
 
     // Stock traded
@@ -35,6 +35,9 @@ public class TradeResult {
     @Column(nullable = false)
     private LocalDateTime timestamp; // When trade executed
 
+    @Column(nullable = false)
+    private String status; // SUCCESS or FAILED message
+
     // --- Constructors ---
     public TradeResult() {}
 
@@ -45,6 +48,17 @@ public class TradeResult {
         this.quantity = quantity;
         this.executedPrice = executedPrice;
         this.timestamp = LocalDateTime.now();
+        this.status = "SUCCESS"; // default
+    }
+
+    public TradeResult(User buyer, User seller, Stock stock, int quantity, double executedPrice, String status) {
+        this.buyer = buyer;
+        this.seller = seller;
+        this.stock = stock;
+        this.quantity = quantity;
+        this.executedPrice = executedPrice;
+        this.timestamp = LocalDateTime.now();
+        this.status = status;
     }
 
     // --- Getters & Setters ---
@@ -67,4 +81,7 @@ public class TradeResult {
 
     public LocalDateTime getTimestamp() { return timestamp; }
     public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }
+
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 }
