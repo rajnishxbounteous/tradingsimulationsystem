@@ -11,38 +11,41 @@ public class Stock {
     private Long id;
 
     @Column(nullable = false, unique = true)
-    private String symbol;   // e.g., TCS, INFY
+    private String symbol;          // e.g., AAPL
 
     @Column(nullable = false)
-    private String name;     // Full name of the company
+    private double price;           // current price
 
-    @Column(nullable = false)
-    private double price;    // Current market price
+    private String displaySymbol;   // e.g., AAPL (NASDAQ)
+    private String description;     // e.g., Apple Inc.
 
-    @Column(nullable = false)
-    private int availableQuantity; // Shares available in market
-
-    // --- Constructors ---
+    // Constructors
     public Stock() {}
 
-    public Stock(String symbol, String name, double price, int availableQuantity) {
+    public Stock(String symbol, double price) {
         this.symbol = symbol;
-        this.name = name;
         this.price = price;
-        this.availableQuantity = availableQuantity;
     }
 
-    // --- Getters & Setters ---
+    public Stock(String symbol, double price, String displaySymbol, String description) {
+        this.symbol = symbol;
+        this.price = price;
+        this.displaySymbol = displaySymbol;
+        this.description = description;
+    }
+
+    // Getters and setters
     public Long getId() { return id; }
+
     public String getSymbol() { return symbol; }
     public void setSymbol(String symbol) { this.symbol = symbol; }
-
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
 
     public double getPrice() { return price; }
     public void setPrice(double price) { this.price = price; }
 
-    public int getAvailableQuantity() { return availableQuantity; }
-    public void setAvailableQuantity(int availableQuantity) { this.availableQuantity = availableQuantity; }
+    public String getDisplaySymbol() { return displaySymbol; }
+    public void setDisplaySymbol(String displaySymbol) { this.displaySymbol = displaySymbol; }
+
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
 }
