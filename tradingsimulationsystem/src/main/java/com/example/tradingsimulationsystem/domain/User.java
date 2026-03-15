@@ -13,7 +13,10 @@ public class User {
     private Long id;
 
     @Column(nullable = false, unique = true)
-    private String username;   // e.g., User1, User2
+    private String username;   // e.g., Rajnish
+
+    @Column(nullable = false)
+    private String password;   // Encrypted password (BCrypt)
 
     @Column(nullable = false)
     private double balance;    // Available cash balance
@@ -31,8 +34,9 @@ public class User {
     // --- Constructors ---
     public User() {}
 
-    public User(String username, double balance, double marginAllowed) {
+    public User(String username, String password, double balance, double marginAllowed) {
         this.username = username;
+        this.password = password;
         this.balance = balance;
         this.marginAllowed = marginAllowed;
     }
@@ -42,6 +46,9 @@ public class User {
 
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }
+
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
 
     public double getBalance() { return balance; }
     public void setBalance(double balance) { this.balance = balance; }
