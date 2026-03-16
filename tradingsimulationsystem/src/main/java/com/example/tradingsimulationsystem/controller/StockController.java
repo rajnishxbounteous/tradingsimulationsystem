@@ -1,11 +1,13 @@
 package com.example.tradingsimulationsystem.controller;
 
 import com.example.tradingsimulationsystem.domain.Stock;
+import com.example.tradingsimulationsystem.dto.StockDTO;
 import com.example.tradingsimulationsystem.repository.StockRepository;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * REST controller to expose available stocks and their current prices.
@@ -25,7 +27,15 @@ public class StockController {
      * Returns symbol, description, displaySymbol, and current price.
      */
     @GetMapping("/api/stocks")
-    public List<Stock> getAllStocks() {
-        return stockRepository.findAll();
+    public List<StockDTO> getAllStocks() {
+        List<Stock> stocks = stockRepository.findAll();
+        return stocks.stream()
+                .map(stock -> new StockDTO(
+                        stock.getSymbol(),
+                        stock.getDisplaySymbol(),
+                        stock.getDescription(),
+                        stock.getPrice()
+                ))
+                .collect(Collectors.toList());
     }
 }

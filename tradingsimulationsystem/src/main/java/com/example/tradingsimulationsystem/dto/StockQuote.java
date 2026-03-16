@@ -11,7 +11,7 @@ public class StockQuote {
     private double l;  // Low price
     private double pc; // Previous close
 
-    // Getters and setters
+    // --- Getters and Setters ---
     public double getC() { return c; }
     public void setC(double c) { this.c = c; }
 

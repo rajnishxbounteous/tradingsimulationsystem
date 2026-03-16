@@ -3,51 +3,60 @@ package com.example.tradingsimulationsystem.service;
 import com.example.tradingsimulationsystem.dto.FinnhubSymbol;
 import com.example.tradingsimulationsystem.dto.StockQuote;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.netty.http.client.HttpClient;
 
-import java.util.Arrays;
 import java.util.List;
 
 @Service
 public class FinnhubService {
 
-    @Value("${finnhub.api.key}")
-    private String apiKey;
-
     private final WebClient webClient;
+    private final String finnhubApiKey;
 
-    public FinnhubService() {
-        this.webClient = WebClient.create("https://finnhub.io/api/v1");
+    public FinnhubService(WebClient.Builder webClientBuilder,
+                          @Value("${finnhub.api.key}") String finnhubApiKey,
+                          @Value("${finnhub.base.url}") String baseUrl) {
+
+        // CRITICAL: Configure HttpClient to follow redirects (handles the 302 error)
+        HttpClient httpClient = HttpClient.create().followRedirect(true);
+
+        this.webClient = webClientBuilder
+                .clientConnector(new ReactorClientHttpConnector(httpClient))
+                .baseUrl(baseUrl)
+                .build();
+        this.finnhubApiKey = finnhubApiKey;
+    }
+
+    public List<FinnhubSymbol> getSymbols(String exchange) {
+        return webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/api/v1/stock/symbol")
+                        .queryParam("exchange", exchange)
+                        .queryParam("token", finnhubApiKey)
+                        .build())
+                .retrieve()
+                .bodyToFlux(FinnhubSymbol.class)
+                .collectList()
+                .block();
     }
 
     public StockQuote getQuote(String symbol) {
-        return webClient.get()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/quote")
-                        .queryParam("symbol", symbol)
-                        .queryParam("token", apiKey)
-                        .build())
-                .retrieve()
-                .bodyToMono(StockQuote.class)
-                .block();
-    }
-
-    /**
-     * Fetch list of US stock symbols from Finnhub.
-     * You can later filter or limit to 50 for free tier.
-     */
-    public List<FinnhubSymbol> getSymbols(String exchange) {
-        FinnhubSymbol[] symbols = webClient.get()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/stock/symbol")
-                        .queryParam("exchange", exchange)
-                        .queryParam("token", apiKey)
-                        .build())
-                .retrieve()
-                .bodyToMono(FinnhubSymbol[].class)
-                .block();
-
-        return Arrays.asList(symbols);
+        try {
+            return webClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/api/v1/quote")
+                            .queryParam("symbol", symbol)
+                            .queryParam("token", finnhubApiKey)
+                            .build())
+                    .retrieve()
+                    .bodyToMono(StockQuote.class)
+                    .block();
+        } catch (Exception e) {
+            System.err.println("Error fetching quote for " + symbol + ": " + e.getMessage());
+            return null;
+        }
     }
 }

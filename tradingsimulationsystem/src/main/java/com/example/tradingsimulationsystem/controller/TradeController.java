@@ -7,10 +7,14 @@ import com.example.tradingsimulationsystem.dto.TradeRequestDTO;
 import com.example.tradingsimulationsystem.dto.TradeResultDTO;
 import com.example.tradingsimulationsystem.mapper.TradeMapper;
 import com.example.tradingsimulationsystem.repository.StockRepository;
+import com.example.tradingsimulationsystem.repository.TradeResultRepository;
 import com.example.tradingsimulationsystem.repository.UserRepository;
 import com.example.tradingsimulationsystem.service.MarketService;
 import com.example.tradingsimulationsystem.service.TradeProcessorService;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/trades")
@@ -20,15 +24,18 @@ public class TradeController {
     private final MarketService marketService;
     private final StockRepository stockRepository;
     private final UserRepository userRepository;
+    private final TradeResultRepository tradeResultRepository;
 
     public TradeController(TradeProcessorService tradeProcessorService,
                            MarketService marketService,
                            StockRepository stockRepository,
-                           UserRepository userRepository) {
+                           UserRepository userRepository,
+                           TradeResultRepository tradeResultRepository) {
         this.tradeProcessorService = tradeProcessorService;
         this.marketService = marketService;
         this.stockRepository = stockRepository;
         this.userRepository = userRepository;
+        this.tradeResultRepository = tradeResultRepository;
     }
 
     /**
@@ -59,5 +66,21 @@ public class TradeController {
 
         // 6. Map entity → DTO for response
         return TradeMapper.toDTO(result);
+    }
+
+    /**
+     * Endpoint to fetch all trades for a given user.
+     * Example: GET /api/trades/{userId}
+     */
+    @GetMapping("/{userId}")
+    public List<TradeResultDTO> getTradeHistory(@PathVariable Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+
+        List<TradeResult> trades = tradeResultRepository.findByBuyerOrSeller(user, user);
+
+        return trades.stream()
+                .map(TradeMapper::toDTO)
+                .collect(Collectors.toList());
     }
 }

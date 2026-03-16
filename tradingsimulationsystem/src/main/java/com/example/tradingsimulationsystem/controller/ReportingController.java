@@ -2,52 +2,111 @@ package com.example.tradingsimulationsystem.controller;
 
 import com.example.tradingsimulationsystem.domain.TradeResult;
 import com.example.tradingsimulationsystem.domain.User;
+import com.example.tradingsimulationsystem.domain.UserPortfolio;
+import com.example.tradingsimulationsystem.dto.PortfolioDTO;
+import com.example.tradingsimulationsystem.dto.TradeResultDTO;
+import com.example.tradingsimulationsystem.mapper.TradeMapper;
+import com.example.tradingsimulationsystem.repository.TradeResultRepository;
+import com.example.tradingsimulationsystem.repository.UserRepository;
 import com.example.tradingsimulationsystem.service.PortfolioService;
-import com.example.tradingsimulationsystem.service.ReportingService;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/reporting")
+@RequestMapping("/api/report")
 public class ReportingController {
 
-    private final ReportingService reportingService;
+    private final TradeResultRepository tradeResultRepository;
+    private final UserRepository userRepository;
     private final PortfolioService portfolioService;
 
-    public ReportingController(ReportingService reportingService,
+    public ReportingController(TradeResultRepository tradeResultRepository,
+                               UserRepository userRepository,
                                PortfolioService portfolioService) {
-        this.reportingService = reportingService;
+        this.tradeResultRepository = tradeResultRepository;
+        this.userRepository = userRepository;
         this.portfolioService = portfolioService;
     }
 
     /**
-     * Endpoint to fetch all buy trades for a user.
-     * Example: GET /api/reporting/{userId}/buy-trades
+     * Get all trades executed by a user, optionally filtered by date range.
+     * Example: GET /api/report/trades/{userId}?from=2026-03-01T00:00:00&to=2026-03-15T23:59:59
      */
-    @GetMapping("/{userId}/buy-trades")
-    public List<TradeResult> getBuyTrades(@PathVariable Long userId) {
-        User user = portfolioService.refreshUser(userId);
-        return reportingService.getBuyTrades(user);
+    @GetMapping("/trades/{userId}")
+    public List<TradeResultDTO> getTradeHistory(
+            @PathVariable Long userId,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+
+        List<TradeResult> trades = tradeResultRepository.findByBuyerOrSeller(user, user);
+
+        // Apply date range filter if provided
+        if (from != null) {
+            trades = trades.stream()
+                    .filter(t -> !t.getTimestamp().isBefore(from))
+                    .collect(Collectors.toList());
+        }
+        if (to != null) {
+            trades = trades.stream()
+                    .filter(t -> !t.getTimestamp().isAfter(to))
+                    .collect(Collectors.toList());
+        }
+
+        return trades.stream()
+                .map(TradeMapper::toDTO)
+                .collect(Collectors.toList());
     }
 
     /**
-     * Endpoint to fetch all sell trades for a user.
-     * Example: GET /api/reporting/{userId}/sell-trades
+     * Get profit/loss summary for a user.
+     * Example: GET /api/report/pnl/{userId}
      */
-    @GetMapping("/{userId}/sell-trades")
-    public List<TradeResult> getSellTrades(@PathVariable Long userId) {
-        User user = portfolioService.refreshUser(userId);
-        return reportingService.getSellTrades(user);
-    }
-
-    /**
-     * Endpoint to calculate profit/loss for a user.
-     * Example: GET /api/reporting/{userId}/profit-loss
-     */
-    @GetMapping("/{userId}/profit-loss")
+    @GetMapping("/pnl/{userId}")
     public double getProfitLoss(@PathVariable Long userId) {
-        User user = portfolioService.refreshUser(userId);
-        return reportingService.calculateProfitLoss(user);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+
+        List<UserPortfolio> portfolios = portfolioService.getUserPortfolio(user);
+
+        double portfolioValue = portfolios.stream()
+                .mapToDouble(p -> p.getQuantity() * p.getStock().getPrice())
+                .sum();
+
+        double totalBalance = user.getBalance();
+        double marginUsed = user.getMarginUsed();
+
+        return portfolioValue + totalBalance - marginUsed;
+    }
+
+    /**
+     * Get portfolio performance summary for a user.
+     * Example: GET /api/report/portfolio/{userId}
+     */
+    @GetMapping("/portfolio/{userId}")
+    public List<PortfolioDTO> getPortfolioSummary(@PathVariable Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+
+        List<UserPortfolio> portfolios = portfolioService.getUserPortfolio(user);
+
+        return portfolios.stream()
+                .map(p -> new PortfolioDTO(
+                        p.getStock().getSymbol(),
+                        p.getStock().getDisplaySymbol(),
+                        p.getStock().getDescription(),
+                        p.getQuantity(),
+                        p.getStock().getPrice(),
+                        p.getQuantity() * p.getStock().getPrice()
+                ))
+                .collect(Collectors.toList());
     }
 }

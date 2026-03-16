@@ -1,17 +1,19 @@
-
 package com.example.tradingsimulationsystem.dto;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-
-@JsonIgnoreProperties(ignoreUnknown = true)
-public class FinnhubSymbol {
+public class StockDTO {
     private String symbol;
     private String displaySymbol;
     private String description;
+    private double price;
 
-    public FinnhubSymbol() {}
+    public StockDTO(String symbol, String displaySymbol, String description, double price) {
+        this.symbol = symbol;
+        this.displaySymbol = displaySymbol;
+        this.description = description;
+        this.price = price;
+    }
 
-    // Getters and Setters
+    // --- Getters & Setters ---
     public String getSymbol() { return symbol; }
     public void setSymbol(String symbol) { this.symbol = symbol; }
 
@@ -20,4 +22,7 @@ public class FinnhubSymbol {
 
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+
+    public double getPrice() { return price; }
+    public void setPrice(double price) { this.price = price; }
 }

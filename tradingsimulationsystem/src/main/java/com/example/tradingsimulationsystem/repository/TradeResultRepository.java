@@ -15,4 +15,6 @@ public interface TradeResultRepository extends JpaRepository<TradeResult, Long> 
 
     // Find all trades executed where the user was the seller
     List<TradeResult> findBySeller(User seller);
+
+    List<TradeResult> findByBuyerOrSeller(User buyer, User seller);
 }

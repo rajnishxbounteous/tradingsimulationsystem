@@ -19,13 +19,16 @@ public class User {
     private String password;   // Encrypted password (BCrypt)
 
     @Column(nullable = false)
-    private double balance;    // Available cash balance
+    private double balance = 10000.0;    // Default starting balance
 
     @Column(nullable = false)
-    private double marginAllowed; // e.g., 5x margin
+    private double marginAllowed = 5.0; // Default margin (5x)
 
     @Column(nullable = false)
-    private double marginUsed = 0.0; // Track how much margin is currently used
+    private double marginUsed = 0.0;    // Track how much margin is currently used
+
+    @Column(nullable = false)
+    private String role = "USER";       // Default role for new users
 
     // Portfolio holdings: one user can hold many stocks
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -34,11 +37,12 @@ public class User {
     // --- Constructors ---
     public User() {}
 
-    public User(String username, String password, double balance, double marginAllowed) {
+    public User(String username, String password, double balance, double marginAllowed, String role) {
         this.username = username;
         this.password = password;
         this.balance = balance;
         this.marginAllowed = marginAllowed;
+        this.role = role;
     }
 
     // --- Getters & Setters ---
@@ -58,6 +62,9 @@ public class User {
 
     public double getMarginUsed() { return marginUsed; }
     public void setMarginUsed(double marginUsed) { this.marginUsed = marginUsed; }
+
+    public String getRole() { return role; }
+    public void setRole(String role) { this.role = role; }
 
     public Set<UserPortfolio> getPortfolios() { return portfolios; }
     public void setPortfolios(Set<UserPortfolio> portfolios) { this.portfolios = portfolios; }

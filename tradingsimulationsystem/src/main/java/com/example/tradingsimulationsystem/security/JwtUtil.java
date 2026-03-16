@@ -1,30 +1,34 @@
 package com.example.tradingsimulationsystem.security;
 
 import io.jsonwebtoken.*;
-import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 @Component
 public class JwtUtil {
 
     private final SecretKey secretKey;
-    private final long EXPIRATION_TIME = 1000 * 60 * 60; // 1 hour
+    private final long expirationTime;
 
-    // Inject secret from application.properties
-    public JwtUtil(@Value("${jwt.secret}") String secret) {
-        this.secretKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret));
+    public JwtUtil(
+            @Value("${jwt.secret}") String secret,
+            @Value("${jwt.expiration}") long expirationTime) {
+
+        // Use raw string bytes instead of Base64 decoding
+        this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        this.expirationTime = expirationTime;
     }
 
     public String generateToken(String username) {
         return Jwts.builder()
                 .setSubject(username)
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
+                .setExpiration(new Date(System.currentTimeMillis() + expirationTime))
                 .signWith(secretKey, SignatureAlgorithm.HS256)
                 .compact();
     }
@@ -39,8 +43,7 @@ public class JwtUtil {
     }
 
     public boolean validateToken(String token, String username) {
-        String extractedUsername = extractUsername(token);
-        return extractedUsername.equals(username) && !isTokenExpired(token);
+        return extractUsername(token).equals(username) && !isTokenExpired(token);
     }
 
     private boolean isTokenExpired(String token) {
@@ -50,6 +53,7 @@ public class JwtUtil {
                 .parseClaimsJws(token)
                 .getBody()
                 .getExpiration();
+
         return expiration.before(new Date());
     }
 }

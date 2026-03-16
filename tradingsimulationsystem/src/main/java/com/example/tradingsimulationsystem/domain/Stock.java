@@ -11,30 +11,39 @@ public class Stock {
     private Long id;
 
     @Column(nullable = false, unique = true)
-    private String symbol;          // e.g., AAPL
+    private String symbol;
 
     @Column(nullable = false)
-    private double price;           // current price
+    private double price;
 
-    private String displaySymbol;   // e.g., AAPL (NASDAQ)
-    private String description;     // e.g., Apple Inc.
+    private String displaySymbol;
+    private String description;
 
-    // Constructors
+    @Column(name = "available_quantity", nullable = false)
+    private int availableQuantity;
+
+    @Column(name = "name")
+    private String name;
+
+    // --- Constructors ---
     public Stock() {}
 
-    public Stock(String symbol, double price) {
+    public Stock(String symbol, double price, int availableQuantity) {
         this.symbol = symbol;
         this.price = price;
+        this.availableQuantity = availableQuantity;
     }
 
-    public Stock(String symbol, double price, String displaySymbol, String description) {
+    public Stock(String symbol, double price, String displaySymbol, String description, int availableQuantity, String name) {
         this.symbol = symbol;
         this.price = price;
         this.displaySymbol = displaySymbol;
         this.description = description;
+        this.availableQuantity = availableQuantity;
+        this.name = name;
     }
 
-    // Getters and setters
+    // --- Getters and Setters ---
     public Long getId() { return id; }
 
     public String getSymbol() { return symbol; }
@@ -48,4 +57,10 @@ public class Stock {
 
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+
+    public int getAvailableQuantity() { return availableQuantity; }
+    public void setAvailableQuantity(int availableQuantity) { this.availableQuantity = availableQuantity; }
+
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
 }

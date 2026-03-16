@@ -29,17 +29,29 @@ public class AuthService {
     }
 
     /**
-     * Register a new user: encode password and save in DB
+     * Register a new user: encode password, save in DB, and return JWT token.
      */
-    public void register(RegisterRequest registerRequest) {
+    public String register(RegisterRequest request) {
+        if (userRepository.findByUsername(request.getUsername()).isPresent()) {
+            throw new IllegalArgumentException("Username already exists");
+        }
+
         User user = new User();
-        user.setUsername(registerRequest.getUsername());
-        user.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
+        user.setUsername(request.getUsername());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setBalance(50000.0);       // default starting balance
+        user.setMarginAllowed(5.0);    // default margin
+        user.setMarginUsed(0.0);       // safe default
+        user.setRole("USER");          // default role
+
         userRepository.save(user);
+
+        return jwtUtil.generateToken(user.getUsername());
     }
 
+
     /**
-     * Login: authenticate and generate JWT token
+     * Login: authenticate and generate JWT token.
      */
     public String login(LoginRequest loginRequest) {
         authenticationManager.authenticate(
