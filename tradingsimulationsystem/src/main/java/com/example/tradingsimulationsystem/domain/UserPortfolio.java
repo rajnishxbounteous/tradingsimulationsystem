@@ -63,4 +63,16 @@ public class UserPortfolio {
     public void setQuantity(int quantity) {
         this.quantity = quantity;
     }
+
+    // --- Convenience methods ---
+    public void addQuantity(int qty) {
+        this.quantity += qty;
+    }
+
+    public void subtractQuantity(int qty) {
+        if (qty > this.quantity) {
+            throw new IllegalArgumentException("Not enough shares to subtract");
+        }
+        this.quantity -= qty;
+    }
 }

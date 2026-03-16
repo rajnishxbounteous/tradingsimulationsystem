@@ -23,7 +23,7 @@ public class PortfolioController {
     }
 
     /**
-     * Endpoint to fetch all portfolio holdings for a user.
+     * Fetch all portfolio holdings for a user.
      * Example: GET /api/portfolio/{userId}
      */
     @GetMapping("/{userId}")
@@ -44,7 +44,7 @@ public class PortfolioController {
     }
 
     /**
-     * Endpoint to fetch current balance of a user.
+     * Fetch current balance of a user.
      * Example: GET /api/portfolio/{userId}/balance
      */
     @GetMapping("/{userId}/balance")
@@ -54,7 +54,7 @@ public class PortfolioController {
     }
 
     /**
-     * Endpoint to fetch margin status of a user.
+     * Fetch margin status of a user.
      * Example: GET /api/portfolio/{userId}/margin
      */
     @GetMapping("/{userId}/margin")
@@ -64,7 +64,7 @@ public class PortfolioController {
     }
 
     /**
-     * Endpoint to buy stocks for a user.
+     * Buy stocks for a user.
      * Example: POST /api/portfolio/{userId}/buy
      * Body: { "symbol": "AAPL", "quantity": 10 }
      */
@@ -72,7 +72,8 @@ public class PortfolioController {
     public ResponseEntity<?> buyStock(@PathVariable Long userId,
                                       @RequestBody BuyRequest buyRequest) {
         try {
-            portfolioService.buyStock(userId, buyRequest.getSymbol(), buyRequest.getQuantity());
+            User user = portfolioService.refreshUser(userId);
+            portfolioService.buyStock(user, buyRequest.getSymbol(), buyRequest.getQuantity());
             return ResponseEntity.ok("Stock purchased successfully");
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -82,7 +83,7 @@ public class PortfolioController {
     }
 
     /**
-     * Endpoint to sell stocks for a user.
+     * Sell stocks for a user.
      * Example: POST /api/portfolio/{userId}/sell
      * Body: { "symbol": "AAPL", "quantity": 5 }
      */
@@ -90,12 +91,26 @@ public class PortfolioController {
     public ResponseEntity<?> sellStock(@PathVariable Long userId,
                                        @RequestBody SellRequest sellRequest) {
         try {
-            portfolioService.sellStock(userId, sellRequest.getSymbol(), sellRequest.getQuantity());
+            User user = portfolioService.refreshUser(userId);
+            portfolioService.sellStock(user, sellRequest.getSymbol(), sellRequest.getQuantity());
             return ResponseEntity.ok("Stock sold successfully");
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Sale failed: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Fetch ledger history for a user.
+     * Example: GET /api/portfolio/{userId}/ledger
+     */
+    @GetMapping("/{userId}/ledger")
+    public ResponseEntity<?> getUserLedger(@PathVariable Long userId) {
+        try {
+            return ResponseEntity.ok(portfolioService.getUserLedger(userId));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Failed to fetch ledger: " + e.getMessage());
         }
     }
 }

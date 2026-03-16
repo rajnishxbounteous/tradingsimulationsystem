@@ -1,119 +1,144 @@
 package com.example.tradingsimulationsystem.service;
 
+import com.example.tradingsimulationsystem.domain.Stock;
+import com.example.tradingsimulationsystem.domain.LedgerEntry;
 import com.example.tradingsimulationsystem.domain.User;
 import com.example.tradingsimulationsystem.domain.UserPortfolio;
-import com.example.tradingsimulationsystem.domain.Stock;
+import com.example.tradingsimulationsystem.repository.StockRepository;
+import com.example.tradingsimulationsystem.repository.LedgerRepository;
 import com.example.tradingsimulationsystem.repository.UserPortfolioRepository;
 import com.example.tradingsimulationsystem.repository.UserRepository;
-import com.example.tradingsimulationsystem.repository.StockRepository;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
 public class PortfolioService {
 
-    private final UserRepository userRepository;
-    private final UserPortfolioRepository portfolioRepository;
     private final StockRepository stockRepository;
+    private final LedgerRepository ledgerRepository;
+    private final UserPortfolioRepository userPortfolioRepository;
+    private final UserRepository userRepository;
 
-    public PortfolioService(UserRepository userRepository,
-                            UserPortfolioRepository portfolioRepository,
-                            StockRepository stockRepository) {
-        this.userRepository = userRepository;
-        this.portfolioRepository = portfolioRepository;
+    public PortfolioService(StockRepository stockRepository,
+                            LedgerRepository ledgerRepository,
+                            UserPortfolioRepository userPortfolioRepository,
+                            UserRepository userRepository) {
         this.stockRepository = stockRepository;
+        this.ledgerRepository = ledgerRepository;
+        this.userPortfolioRepository = userPortfolioRepository;
+        this.userRepository = userRepository;
     }
 
     /**
-     * Refresh user from DB (ensures latest state).
+     * Utility method to fetch a User entity by ID.
      */
     public User refreshUser(Long userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+                .orElseThrow(() -> new RuntimeException("User not found: " + userId));
     }
 
     /**
-     * Get all portfolio holdings for a given user.
+     * Buy stock for a user.
+     */
+    public void buyStock(User user, String symbol, int quantity) {
+        Stock stock = stockRepository.findBySymbol(symbol)
+                .orElseThrow(() -> new RuntimeException("Stock not found: " + symbol));
+
+        if (stock.getAvailableQuantity() < quantity) {
+            throw new RuntimeException("Not enough stock to buy");
+        }
+
+        // Update stock availability
+        stock.setAvailableQuantity(stock.getAvailableQuantity() - quantity);
+        stockRepository.save(stock);
+
+        // Update user portfolio
+        UserPortfolio portfolio = userPortfolioRepository.findByUserAndStock(user, stock)
+                .orElse(null);
+
+        if (portfolio == null) {
+            portfolio = new UserPortfolio(user, stock, quantity);
+        } else {
+            portfolio.addQuantity(quantity);
+        }
+        userPortfolioRepository.save(portfolio);
+
+        // Record in ledger
+        LedgerEntry entry = new LedgerEntry();
+        entry.setUserId(user.getId());
+        entry.setStockSymbol(symbol);
+        entry.setQuantity(quantity);
+        entry.setPrice(stock.getPrice());
+        entry.setType("BUY");
+        entry.setTimestamp(LocalDateTime.now());
+        entry.setRemainingQuantity(stock.getAvailableQuantity());
+        ledgerRepository.save(entry);
+    }
+
+    /**
+     * Sell stock for a user.
+     */
+    public void sellStock(User user, String symbol, int quantity) {
+        Stock stock = stockRepository.findBySymbol(symbol)
+                .orElseThrow(() -> new RuntimeException("Stock not found: " + symbol));
+
+        UserPortfolio portfolio = userPortfolioRepository.findByUserAndStock(user, stock)
+                .orElse(null);
+
+        if (portfolio == null || portfolio.getQuantity() < quantity) {
+            throw new RuntimeException("Not enough holdings to sell");
+        }
+
+        // Update stock availability
+        stock.setAvailableQuantity(stock.getAvailableQuantity() + quantity);
+        stockRepository.save(stock);
+
+        // Update user portfolio
+        portfolio.subtractQuantity(quantity);
+        userPortfolioRepository.save(portfolio);
+
+        // Record in ledger
+        LedgerEntry entry = new LedgerEntry();
+        entry.setUserId(user.getId());
+        entry.setStockSymbol(symbol);
+        entry.setQuantity(quantity);
+        entry.setPrice(stock.getPrice());
+        entry.setType("SELL");
+        entry.setTimestamp(LocalDateTime.now());
+        entry.setRemainingQuantity(stock.getAvailableQuantity());
+        ledgerRepository.save(entry);
+    }
+
+    /**
+     * Fetch all portfolio holdings for a user.
      */
     public List<UserPortfolio> getUserPortfolio(User user) {
-        return portfolioRepository.findByUser(user);
+        return userPortfolioRepository.findByUser(user);
     }
 
     /**
-     * Get the current cash balance of a user.
+     * Fetch all ledger entries for a user.
+     */
+    public List<LedgerEntry> getUserLedger(Long userId) {
+        return ledgerRepository.findByUserId(userId);
+    }
+
+    /**
+     * Example: calculate user balance (sum of holdings).
      */
     public double getUserBalance(User user) {
-        return user.getBalance();
+        return userPortfolioRepository.findByUser(user).stream()
+                .mapToDouble(p -> p.getQuantity() * p.getStock().getPrice())
+                .sum();
     }
 
     /**
-     * Get margin usage details for a user.
+     * Example: margin status placeholder.
      */
     public String getMarginStatus(User user) {
-        return "Margin Allowed: " + user.getMarginAllowed() +
-                ", Margin Used: " + user.getMarginUsed();
-    }
-
-    /**
-     * Buy stocks for a user.
-     */
-    public void buyStock(Long userId, String symbol, int quantity) {
-        User user = refreshUser(userId);
-        Stock stock = stockRepository.findBySymbol(symbol)
-                .orElseThrow(() -> new IllegalArgumentException("Stock not found: " + symbol));
-
-        double totalCost = stock.getPrice() * quantity;
-
-        if (user.getBalance() < totalCost) {
-            throw new IllegalArgumentException("Insufficient balance");
-        }
-        if (stock.getAvailableQuantity() < quantity) {
-            throw new IllegalArgumentException("Not enough stock available");
-        }
-
-        // Deduct balance and update stock availability
-        user.setBalance(user.getBalance() - totalCost);
-        stock.setAvailableQuantity(stock.getAvailableQuantity() - quantity);
-
-        // Update portfolio
-        UserPortfolio portfolio = portfolioRepository.findByUserAndStock(user, stock)
-                .orElse(new UserPortfolio(user, stock, 0));
-        portfolio.setQuantity(portfolio.getQuantity() + quantity);
-
-        // Save changes
-        userRepository.save(user);
-        stockRepository.save(stock);
-        portfolioRepository.save(portfolio);
-    }
-
-    /**
-     * Sell stocks for a user.
-     */
-    public void sellStock(Long userId, String symbol, int quantity) {
-        User user = refreshUser(userId);
-        Stock stock = stockRepository.findBySymbol(symbol)
-                .orElseThrow(() -> new IllegalArgumentException("Stock not found: " + symbol));
-
-        UserPortfolio portfolio = portfolioRepository.findByUserAndStock(user, stock)
-                .orElseThrow(() -> new IllegalArgumentException("User does not own this stock"));
-
-        if (portfolio.getQuantity() < quantity) {
-            throw new IllegalArgumentException("Not enough stock quantity to sell");
-        }
-
-        double totalProceeds = stock.getPrice() * quantity;
-
-        // Increase balance and stock availability
-        user.setBalance(user.getBalance() + totalProceeds);
-        stock.setAvailableQuantity(stock.getAvailableQuantity() + quantity);
-
-        // Update portfolio
-        portfolio.setQuantity(portfolio.getQuantity() - quantity);
-
-        // Save changes
-        userRepository.save(user);
-        stockRepository.save(stock);
-        portfolioRepository.save(portfolio);
+        // Implement your own margin logic here
+        return "Margin status not implemented";
     }
 }
