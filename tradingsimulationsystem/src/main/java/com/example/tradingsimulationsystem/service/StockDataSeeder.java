@@ -30,11 +30,11 @@ public class StockDataSeeder {
                 String profileUrl = "https://finnhub.io/api/v1/stock/profile2?symbol=" + symbol + "&token=" + API_KEY;
                 ProfileResponse profile = restTemplate.getForObject(profileUrl, ProfileResponse.class);
 
-                // Decide availableQuantity (simulation choice)
-                int availableQuantity = (int) Math.min(
-                        profile != null ? profile.getShareOutstanding() : 1000,
-                        1000
-                );
+                // Calculate availableQuantity: Use profile data if valid, else default to 1000
+                int availableQuantity = 1000; // Default for simulation
+                if (profile != null && profile.getShareOutstanding() > 0) {
+                    availableQuantity = (int) Math.min(profile.getShareOutstanding(), 1000);
+                }
 
                 // Create and save stock
                 Stock stock = new Stock();

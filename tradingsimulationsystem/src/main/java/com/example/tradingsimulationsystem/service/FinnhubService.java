@@ -9,6 +9,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.netty.http.client.HttpClient;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class FinnhubService {
@@ -56,6 +57,26 @@ public class FinnhubService {
                     .block();
         } catch (Exception e) {
             System.err.println("Error fetching quote for " + symbol + ": " + e.getMessage());
+            return null;
+        }
+    }
+
+    public Map<String, Object> getStockCandle(String symbol, String resolution, long from, long to) {
+        try {
+            return webClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/api/v1/stock/candle")
+                            .queryParam("symbol", symbol)
+                            .queryParam("resolution", resolution)
+                            .queryParam("from", from)
+                            .queryParam("to", to)
+                            .queryParam("token", finnhubApiKey)
+                            .build())
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+        } catch (Exception e) {
+            System.err.println("Error fetching candle data for " + symbol + ": " + e.getMessage());
             return null;
         }
     }
