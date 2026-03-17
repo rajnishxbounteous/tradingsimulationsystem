@@ -31,17 +31,11 @@ public class PortfolioService {
         this.userRepository = userRepository;
     }
 
-    /**
-     * Utility method to fetch a User entity by ID.
-     */
     public User refreshUser(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found: " + userId));
     }
 
-    /**
-     * Buy stock for a user.
-     */
     public void buyStock(User user, String symbol, int quantity) {
         Stock stock = stockRepository.findBySymbol(symbol)
                 .orElseThrow(() -> new RuntimeException("Stock not found: " + symbol));
@@ -50,11 +44,9 @@ public class PortfolioService {
             throw new RuntimeException("Not enough stock to buy");
         }
 
-        // Update stock availability
         stock.setAvailableQuantity(stock.getAvailableQuantity() - quantity);
         stockRepository.save(stock);
 
-        // Update user portfolio
         UserPortfolio portfolio = userPortfolioRepository.findByUserAndStock(user, stock)
                 .orElse(null);
 
@@ -65,21 +57,17 @@ public class PortfolioService {
         }
         userPortfolioRepository.save(portfolio);
 
-        // Record in ledger
         LedgerEntry entry = new LedgerEntry();
         entry.setUserId(user.getId());
         entry.setStockSymbol(symbol);
         entry.setQuantity(quantity);
-        entry.setPrice(stock.getPrice());
+        entry.setPrice(stock.getCurrentPrice());
         entry.setType("BUY");
         entry.setTimestamp(LocalDateTime.now());
         entry.setRemainingQuantity(stock.getAvailableQuantity());
         ledgerRepository.save(entry);
     }
 
-    /**
-     * Sell stock for a user.
-     */
     public void sellStock(User user, String symbol, int quantity) {
         Stock stock = stockRepository.findBySymbol(symbol)
                 .orElseThrow(() -> new RuntimeException("Stock not found: " + symbol));
@@ -91,54 +79,61 @@ public class PortfolioService {
             throw new RuntimeException("Not enough holdings to sell");
         }
 
-        // Update stock availability
         stock.setAvailableQuantity(stock.getAvailableQuantity() + quantity);
         stockRepository.save(stock);
 
-        // Update user portfolio
         portfolio.subtractQuantity(quantity);
         userPortfolioRepository.save(portfolio);
 
-        // Record in ledger
         LedgerEntry entry = new LedgerEntry();
         entry.setUserId(user.getId());
         entry.setStockSymbol(symbol);
         entry.setQuantity(quantity);
-        entry.setPrice(stock.getPrice());
+        entry.setPrice(stock.getCurrentPrice());
         entry.setType("SELL");
         entry.setTimestamp(LocalDateTime.now());
         entry.setRemainingQuantity(stock.getAvailableQuantity());
         ledgerRepository.save(entry);
     }
 
-    /**
-     * Fetch all portfolio holdings for a user.
-     */
     public List<UserPortfolio> getUserPortfolio(User user) {
         return userPortfolioRepository.findByUser(user);
     }
 
-    /**
-     * Fetch all ledger entries for a user.
-     */
     public List<LedgerEntry> getUserLedger(Long userId) {
         return ledgerRepository.findByUserId(userId);
     }
 
-    /**
-     * Example: calculate user balance (sum of holdings).
-     */
     public double getUserBalance(User user) {
         return userPortfolioRepository.findByUser(user).stream()
-                .mapToDouble(p -> p.getQuantity() * p.getStock().getPrice())
+                .mapToDouble(p -> p.getQuantity() * p.getStock().getCurrentPrice())
                 .sum();
     }
 
     /**
-     * Example: margin status placeholder.
+     * Margin status implementation.
      */
     public String getMarginStatus(User user) {
-        // Implement your own margin logic here
-        return "Margin status not implemented";
+        double portfolioValue = getUserBalance(user);
+        double cashBalance = user.getBalance();
+        double marginUsed = user.getMarginUsed();
+        double marginAllowedMultiplier = user.getMarginAllowed();
+
+        // Equity = cash + portfolio - margin used
+        double equity = cashBalance + portfolioValue - marginUsed;
+
+        // Maximum margin buying power
+        double maxMargin = cashBalance * marginAllowedMultiplier;
+
+        if (equity < 0) {
+            return "Margin call: account equity is negative!";
+        } else if (marginUsed > maxMargin) {
+            return String.format("Margin call: margin used (%.2f) exceeds allowed (%.2f).",
+                    marginUsed, maxMargin);
+        } else {
+            double marginRatio = equity / (portfolioValue + cashBalance) * 100;
+            return String.format("Margin healthy: Equity = %.2f, Margin Used = %.2f, Allowed = %.2f (Ratio %.1f%%)",
+                    equity, marginUsed, maxMargin, marginRatio);
+        }
     }
 }

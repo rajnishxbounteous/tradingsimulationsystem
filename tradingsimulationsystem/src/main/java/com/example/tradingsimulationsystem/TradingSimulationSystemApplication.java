@@ -5,27 +5,25 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @EnableScheduling
 @SpringBootApplication
 public class TradingSimulationSystemApplication {
 
-    private final StockDataSeeder stockDataSeeder;
-
-    public TradingSimulationSystemApplication(StockDataSeeder stockDataSeeder) {
-        this.stockDataSeeder = stockDataSeeder;
-    }
-
     public static void main(String[] args) {
         SpringApplication.run(TradingSimulationSystemApplication.class, args);
     }
 
+    /**
+     * Seed stocks on startup, but only when NOT running in the 'test' profile.
+     */
     @Bean
-    public CommandLineRunner seedStocksOnStartup() {
+    @Profile("!test")   // <--- Runner excluded in test profile
+    public CommandLineRunner seedStocksOnStartup(StockDataSeeder stockDataSeeder) {
         return args -> {
-            // Update this list to the symbols you want in the simulation
-            String[] symbols = new String[] { "AAPL", "MSFT", "TSLA", "GOOGL", "AMZN" };
+            String[] symbols = stockDataSeeder.fetchSymbolsFromFinnhub("US");
             stockDataSeeder.seedStocks(symbols);
         };
     }

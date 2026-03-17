@@ -64,7 +64,7 @@ public class TradeProcessorService {
         }
 
         int quantity = request.getQuantity();
-        double price = stock.getPrice();
+        double price = stock.getCurrentPrice();
 
         if (request.getTradeType() == TradeType.BUY) {
             double totalCost = price * quantity;

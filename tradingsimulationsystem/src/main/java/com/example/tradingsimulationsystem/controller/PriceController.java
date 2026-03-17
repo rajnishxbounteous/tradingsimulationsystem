@@ -19,7 +19,7 @@ public class PriceController {
     }
 
     /**
-     * Get all current stock prices.
+     * Get all current stock prices with full quote data.
      * Example: GET /api/prices
      */
     @GetMapping
@@ -30,13 +30,19 @@ public class PriceController {
                         s.getSymbol(),
                         s.getDisplaySymbol(),
                         s.getDescription(),
-                        s.getPrice()
+                        s.getCurrentPrice(),   // c
+                        s.getChange(),         // d
+                        s.getPercentChange(),  // dp
+                        s.getHigh(),           // h
+                        s.getLow(),            // l
+                        s.getOpen(),           // o
+                        s.getPreviousClose()   // pc
                 ))
                 .collect(Collectors.toList());
     }
 
     /**
-     * Get current price for a specific symbol.
+     * Get current price and full quote data for a specific symbol.
      * Example: GET /api/prices/AAPL
      */
     @GetMapping("/{symbol}")
@@ -48,7 +54,13 @@ public class PriceController {
                 stock.getSymbol(),
                 stock.getDisplaySymbol(),
                 stock.getDescription(),
-                stock.getPrice()
+                stock.getCurrentPrice(),   // c
+                stock.getChange(),         // d
+                stock.getPercentChange(),  // dp
+                stock.getHigh(),           // h
+                stock.getLow(),            // l
+                stock.getOpen(),           // o
+                stock.getPreviousClose()   // pc
         );
     }
 }

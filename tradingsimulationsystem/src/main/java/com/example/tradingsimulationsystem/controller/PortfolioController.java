@@ -37,8 +37,8 @@ public class PortfolioController {
                         p.getStock().getDisplaySymbol(),
                         p.getStock().getDescription(),
                         p.getQuantity(),
-                        p.getStock().getPrice(),
-                        p.getQuantity() * p.getStock().getPrice()
+                        p.getStock().getCurrentPrice(),
+                        p.getQuantity() * p.getStock().getCurrentPrice()
                 ))
                 .collect(Collectors.toList());
     }

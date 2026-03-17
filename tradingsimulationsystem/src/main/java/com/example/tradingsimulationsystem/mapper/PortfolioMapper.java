@@ -9,7 +9,7 @@ public class PortfolioMapper {
         return new UserPortfolioDTO(
                 portfolio.getStock().getSymbol(),
                 portfolio.getQuantity(),
-                portfolio.getStock().getPrice()
+                portfolio.getStock().getCurrentPrice()
         );
     }
 }

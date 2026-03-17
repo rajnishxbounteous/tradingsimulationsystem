@@ -78,7 +78,7 @@ public class ReportingController {
         List<UserPortfolio> portfolios = portfolioService.getUserPortfolio(user);
 
         double portfolioValue = portfolios.stream()
-                .mapToDouble(p -> p.getQuantity() * p.getStock().getPrice())
+                .mapToDouble(p -> p.getQuantity() * p.getStock().getCurrentPrice())
                 .sum();
 
         double totalBalance = user.getBalance();
@@ -104,8 +104,8 @@ public class ReportingController {
                         p.getStock().getDisplaySymbol(),
                         p.getStock().getDescription(),
                         p.getQuantity(),
-                        p.getStock().getPrice(),
-                        p.getQuantity() * p.getStock().getPrice()
+                        p.getStock().getCurrentPrice(),
+                        p.getQuantity() * p.getStock().getCurrentPrice()
                 ))
                 .collect(Collectors.toList());
     }

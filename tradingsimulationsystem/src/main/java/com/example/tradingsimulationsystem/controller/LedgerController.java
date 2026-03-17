@@ -1,0 +1,26 @@
+package com.example.tradingsimulationsystem.controller;
+
+import com.example.tradingsimulationsystem.domain.LedgerEntry;
+import com.example.tradingsimulationsystem.service.PortfolioService;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/ledger")
+public class LedgerController {
+
+    private final PortfolioService portfolioService;
+
+    public LedgerController(PortfolioService portfolioService) {
+        this.portfolioService = portfolioService;
+    }
+
+    /**
+     * Get full trade history (ledger) for a user.
+     */
+    @GetMapping("/{userId}")
+    public List<LedgerEntry> getUserLedger(@PathVariable Long userId) {
+        return portfolioService.getUserLedger(userId);
+    }
+}

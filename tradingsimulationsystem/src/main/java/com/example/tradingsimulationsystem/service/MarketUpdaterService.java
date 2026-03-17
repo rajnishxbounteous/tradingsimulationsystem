@@ -34,7 +34,7 @@ public class MarketUpdaterService {
             try {
                 StockQuote quote = finnhubService.getQuote(stock.getSymbol());
                 if (quote != null && quote.getC() > 0) {
-                    stock.setPrice(quote.getC()); // update with current price
+                    stock.setCurrentPrice(quote.getC()); // update with current price
                     stockRepository.save(stock);
                 }
             } catch (Exception e) {

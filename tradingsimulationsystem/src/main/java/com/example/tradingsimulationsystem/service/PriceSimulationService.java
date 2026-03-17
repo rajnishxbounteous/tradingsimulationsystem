@@ -27,7 +27,7 @@ public class PriceSimulationService {
         List<Stock> stocks = stockRepository.findAll();
 
         for (Stock stock : stocks) {
-            double currentPrice = stock.getPrice();
+            double currentPrice = stock.getCurrentPrice();
 
             // Simulate random price change between -5% and +5%
             double changePercent = (random.nextDouble() * 10) - 5;
@@ -36,7 +36,7 @@ public class PriceSimulationService {
             // Ensure price doesn’t go below 1
             if (newPrice < 1) newPrice = 1;
 
-            stock.setPrice(newPrice);
+            stock.setCurrentPrice(newPrice);
             stockRepository.save(stock);
         }
     }

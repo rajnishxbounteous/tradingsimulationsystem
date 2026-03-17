@@ -34,8 +34,15 @@ public class StockController {
                         stock.getSymbol(),
                         stock.getDisplaySymbol(),
                         stock.getDescription(),
-                        stock.getPrice()
+                        stock.getCurrentPrice(),   // c
+                        stock.getChange(),         // d
+                        stock.getPercentChange(),  // dp
+                        stock.getHigh(),           // h
+                        stock.getLow(),            // l
+                        stock.getOpen(),           // o
+                        stock.getPreviousClose()   // pc
                 ))
                 .collect(Collectors.toList());
     }
+
 }
