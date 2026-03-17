@@ -3,6 +3,7 @@ package com.example.tradingsimulationsystem.service;
 import com.example.tradingsimulationsystem.domain.User;
 import com.example.tradingsimulationsystem.dto.LoginRequest;
 import com.example.tradingsimulationsystem.dto.RegisterRequest;
+import com.example.tradingsimulationsystem.dto.AuthResponse;
 import com.example.tradingsimulationsystem.repository.UserRepository;
 import com.example.tradingsimulationsystem.security.JwtUtil;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -29,9 +30,9 @@ public class AuthService {
     }
 
     /**
-     * Register a new user: encode password, save in DB, and return JWT token.
+     * Register a new user: encode password, save in DB, and return both access & refresh tokens.
      */
-    public String register(RegisterRequest request) {
+    public AuthResponse register(RegisterRequest request) {
         if (userRepository.findByUsername(request.getUsername()).isPresent()) {
             throw new IllegalArgumentException("Username already exists");
         }
@@ -46,20 +47,40 @@ public class AuthService {
 
         userRepository.save(user);
 
-        return jwtUtil.generateToken(user.getUsername());
+        String accessToken = jwtUtil.generateAccessToken(user.getUsername());
+        String refreshToken = jwtUtil.generateRefreshToken(user.getUsername());
+
+        return new AuthResponse(accessToken, refreshToken);
     }
 
-
     /**
-     * Login: authenticate and generate JWT token.
+     * Login: authenticate and generate both access & refresh tokens.
      */
-    public String login(LoginRequest loginRequest) {
+    public AuthResponse login(LoginRequest loginRequest) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         loginRequest.getUsername(),
                         loginRequest.getPassword()
                 )
         );
-        return jwtUtil.generateToken(loginRequest.getUsername());
+
+        String accessToken = jwtUtil.generateAccessToken(loginRequest.getUsername());
+        String refreshToken = jwtUtil.generateRefreshToken(loginRequest.getUsername());
+
+        return new AuthResponse(accessToken, refreshToken);
+    }
+
+    /**
+     * Refresh access token using a valid refresh token.
+     */
+    public AuthResponse refreshAccessToken(String refreshToken) {
+        if (jwtUtil.validateRefreshToken(refreshToken)) {
+            String username = jwtUtil.extractUsernameFromRefresh(refreshToken);
+            String newAccessToken = jwtUtil.generateAccessToken(username);
+            // return same refresh token (still valid) with new access token
+            return new AuthResponse(newAccessToken, refreshToken);
+        } else {
+            throw new IllegalArgumentException("Invalid or expired refresh token");
+        }
     }
 }

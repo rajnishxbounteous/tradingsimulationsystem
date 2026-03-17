@@ -12,48 +12,74 @@ import java.util.Date;
 @Component
 public class JwtUtil {
 
-    private final SecretKey secretKey;
-    private final long expirationTime;
+    private final SecretKey accessSecretKey;
+    private final SecretKey refreshSecretKey;
+    private final long accessExpiration;
+    private final long refreshExpiration;
 
     public JwtUtil(
-            @Value("${jwt.secret}") String secret,
-            @Value("${jwt.expiration}") long expirationTime) {
+            @Value("${jwt.access.secret}") String accessSecret,
+            @Value("${jwt.refresh.secret}") String refreshSecret,
+            @Value("${jwt.access.expiration}") long accessExpiration,
+            @Value("${jwt.refresh.expiration}") long refreshExpiration) {
 
-        // Use raw string bytes instead of Base64 decoding
-        this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-        this.expirationTime = expirationTime;
+        this.accessSecretKey = Keys.hmacShaKeyFor(accessSecret.getBytes(StandardCharsets.UTF_8));
+        this.refreshSecretKey = Keys.hmacShaKeyFor(refreshSecret.getBytes(StandardCharsets.UTF_8));
+        this.accessExpiration = accessExpiration;
+        this.refreshExpiration = refreshExpiration;
     }
 
-    public String generateToken(String username) {
+    public String generateAccessToken(String username) {
         return Jwts.builder()
                 .setSubject(username)
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + expirationTime))
-                .signWith(secretKey, SignatureAlgorithm.HS256)
+                .setExpiration(new Date(System.currentTimeMillis() + accessExpiration))
+                .signWith(accessSecretKey, SignatureAlgorithm.HS256)
                 .compact();
     }
 
-    public String extractUsername(String token) {
+    public String generateRefreshToken(String username) {
+        return Jwts.builder()
+                .setSubject(username)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + refreshExpiration))
+                .signWith(refreshSecretKey, SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    public String extractUsernameFromAccess(String token) {
         return Jwts.parserBuilder()
-                .setSigningKey(secretKey)
+                .setSigningKey(accessSecretKey)
                 .build()
                 .parseClaimsJws(token)
                 .getBody()
                 .getSubject();
     }
 
-    public boolean validateToken(String token, String username) {
-        return extractUsername(token).equals(username) && !isTokenExpired(token);
+    public String extractUsernameFromRefresh(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(refreshSecretKey)
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getSubject();
     }
 
-    private boolean isTokenExpired(String token) {
+    public boolean validateAccessToken(String token, String username) {
+        return extractUsernameFromAccess(token).equals(username) && !isTokenExpired(token, accessSecretKey);
+    }
+
+    public boolean validateRefreshToken(String token) {
+        return !isTokenExpired(token, refreshSecretKey);
+    }
+
+    private boolean isTokenExpired(String token, SecretKey key) {
         Date expiration = Jwts.parserBuilder()
-                .setSigningKey(secretKey)
+                .setSigningKey(key)
                 .build()
                 .parseClaimsJws(token)
                 .getBody()
                 .getExpiration();
-
         return expiration.before(new Date());
     }
 }
