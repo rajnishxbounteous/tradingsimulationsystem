@@ -58,6 +58,7 @@ public class PortfolioService {
         userPortfolioRepository.save(portfolio);
 
         LedgerEntry entry = new LedgerEntry();
+        entry.setCompanyName(stock.getDescription());
         entry.setUserId(user.getId());
         entry.setStockSymbol(symbol);
         entry.setQuantity(quantity);
@@ -93,6 +94,7 @@ public class PortfolioService {
         entry.setType("SELL");
         entry.setTimestamp(LocalDateTime.now());
         entry.setRemainingQuantity(stock.getAvailableQuantity());
+        entry.setCompanyName(stock.getDescription());
         ledgerRepository.save(entry);
     }
 

@@ -21,6 +21,7 @@ public class LedgerEntry {
     private double price;
     private String type; // BUY or SELL
     private LocalDateTime timestamp;
+    private String companyName;
 
     // optional: snapshot of availableQuantity after trade
     private int remainingQuantity;
@@ -81,6 +82,14 @@ public class LedgerEntry {
 
     public void setTimestamp(LocalDateTime timestamp) {
         this.timestamp = timestamp;
+    }
+
+    public String getCompanyName(){
+        return companyName;
+    }
+
+    public void setCompanyName(String companyName){
+        this.companyName = companyName;
     }
 
     public int getRemainingQuantity() {

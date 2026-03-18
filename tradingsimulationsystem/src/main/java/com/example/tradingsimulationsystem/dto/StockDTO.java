@@ -1,7 +1,6 @@
 package com.example.tradingsimulationsystem.dto;
-//import com.example.tradingsimulationsystem.controller.StockController;
 
-
+import com.example.tradingsimulationsystem.domain.Stock;
 
 public class StockDTO {
     private String symbol;
@@ -17,6 +16,8 @@ public class StockDTO {
     private double open;           // o
     private double previousClose;  // pc
 
+    public StockDTO() {}
+
     public StockDTO(String symbol, String displaySymbol, String description,
                     double currentPrice, double change, double percentChange,
                     double high, double low, double open, double previousClose) {
@@ -30,6 +31,22 @@ public class StockDTO {
         this.low = low;
         this.open = open;
         this.previousClose = previousClose;
+    }
+
+    // --- Static factory method ---
+    public static StockDTO fromEntity(Stock stock) {
+        return new StockDTO(
+                stock.getSymbol(),
+                stock.getDisplaySymbol(),
+                stock.getDescription(),
+                stock.getCurrentPrice(),
+                stock.getChange(),
+                stock.getPercentChange(),
+                stock.getHigh(),
+                stock.getLow(),
+                stock.getOpen(),
+                stock.getPreviousClose()
+        );
     }
 
     // --- Getters & Setters ---
