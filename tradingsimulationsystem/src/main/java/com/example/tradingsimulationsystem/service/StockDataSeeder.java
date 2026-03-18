@@ -21,7 +21,7 @@ public class StockDataSeeder {
     private final RestTemplate restTemplate;
     private final String apiKey;
     private final String baseUrl;
-
+// change the constructor
     public StockDataSeeder(StockRepository stockRepository,
                            @Value("${finnhub.api.key}") String apiKey,
                            @Value("${finnhub.base.url}") String baseUrl) {

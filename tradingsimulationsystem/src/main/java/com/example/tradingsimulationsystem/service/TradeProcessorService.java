@@ -5,9 +5,9 @@ import com.example.tradingsimulationsystem.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 
 @Service
 public class TradeProcessorService {
@@ -17,6 +17,7 @@ public class TradeProcessorService {
     private final StockRepository stockRepository;
     private final UserPortfolioRepository portfolioRepository;
     private final TradeResultRepository tradeResultRepository;
+    private final LedgerRepository ledgerRepository; // NEW
 
     // Thread pool for concurrent trade execution
     private final ExecutorService executorService = Executors.newFixedThreadPool(10);
@@ -25,24 +26,35 @@ public class TradeProcessorService {
                                  UserRepository userRepository,
                                  StockRepository stockRepository,
                                  UserPortfolioRepository portfolioRepository,
-                                 TradeResultRepository tradeResultRepository) {
+                                 TradeResultRepository tradeResultRepository,
+                                 LedgerRepository ledgerRepository) { // NEW
         this.marketService = marketService;
         this.userRepository = userRepository;
         this.stockRepository = stockRepository;
         this.portfolioRepository = portfolioRepository;
         this.tradeResultRepository = tradeResultRepository;
+        this.ledgerRepository = ledgerRepository; // NEW
     }
 
     /**
      * Submit a trade request for concurrent execution and return the result.
      */
     public TradeResult processTradeRequest(TradeRequest request) {
-        // Run trade synchronously for now (can be async if needed)
-        return executeTrade(request);
+        try {
+            // Submit to thread pool and wait for result
+            Future<TradeResult> future = executorService.submit(() -> executeTrade(request));
+            return future.get(); // block until trade finishes
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Trade execution interrupted", e);
+        } catch (ExecutionException e) {
+            throw new RuntimeException("Trade execution failed", e);
+        }
     }
 
     /**
      * Execute trade logic: validate market, balance/margin, update portfolios, record result.
+     * Runs inside worker thread with its own transaction.
      */
     @Transactional
     public TradeResult executeTrade(TradeRequest request) {
@@ -93,6 +105,18 @@ public class TradeProcessorService {
             TradeResult result = new TradeResult(user, null, stock, quantity, price, "SUCCESS: BUY executed");
             tradeResultRepository.save(result);
 
+            // NEW: Save ledger entry
+            LedgerEntry ledgerEntry = new LedgerEntry();
+            ledgerEntry.setUserId(user.getId());
+            ledgerEntry.setStockSymbol(stock.getSymbol());
+            ledgerEntry.setType(TradeType.BUY.name());
+            ledgerEntry.setQuantity(quantity);
+            ledgerEntry.setPrice(price);
+            ledgerEntry.setTimestamp(LocalDateTime.now());
+            ledgerEntry.setCompanyName(stock.getDescription());
+            ledgerEntry.setRemainingQuantity(portfolio.getQuantity());
+            ledgerRepository.save(ledgerEntry);
+
             userRepository.save(user);
             return result;
 
@@ -113,6 +137,18 @@ public class TradeProcessorService {
             // Record trade result
             TradeResult result = new TradeResult(null, user, stock, quantity, price, "SUCCESS: SELL executed");
             tradeResultRepository.save(result);
+
+            // NEW: Save ledger entry
+            LedgerEntry ledgerEntry = new LedgerEntry();
+            ledgerEntry.setUserId(user.getId());
+            ledgerEntry.setStockSymbol(stock.getSymbol());
+            ledgerEntry.setType(TradeType.SELL.name());
+            ledgerEntry.setQuantity(quantity);
+            ledgerEntry.setPrice(price);
+            ledgerEntry.setTimestamp(LocalDateTime.now());
+            ledgerEntry.setCompanyName(stock.getDescription());
+            ledgerEntry.setRemainingQuantity(portfolio.getQuantity());
+            ledgerRepository.save(ledgerEntry);
 
             userRepository.save(user);
             return result;

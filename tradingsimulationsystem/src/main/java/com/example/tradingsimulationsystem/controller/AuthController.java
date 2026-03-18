@@ -33,6 +33,7 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
         try {
+            System.out.println(loginRequest.getUsername());
             AuthResponse tokens = authService.login(loginRequest);
             return ResponseEntity.ok(tokens);
         } catch (IllegalArgumentException e) {

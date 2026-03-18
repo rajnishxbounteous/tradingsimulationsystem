@@ -101,16 +101,5 @@ public class PortfolioController {
         }
     }
 
-    /**
-     * Fetch ledger history for a user.
-     * Example: GET /api/portfolio/{userId}/ledger
-     */
-    @GetMapping("/{userId}/ledger")
-    public ResponseEntity<?> getUserLedger(@PathVariable Long userId) {
-        try {
-            return ResponseEntity.ok(portfolioService.getUserLedger(userId));
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("Failed to fetch ledger: " + e.getMessage());
-        }
-    }
+
 }

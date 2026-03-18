@@ -105,7 +105,6 @@ public class PortfolioService {
     public List<LedgerEntry> getUserLedger(Long userId) {
         return ledgerRepository.findByUserId(userId);
     }
-
     public double getUserBalance(User user) {
         return userPortfolioRepository.findByUser(user).stream()
                 .mapToDouble(p -> p.getQuantity() * p.getStock().getCurrentPrice())

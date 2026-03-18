@@ -45,12 +45,13 @@ public class AuthService {
         user.setMarginUsed(0.0);       // safe default
         user.setRole("USER");          // default role
 
+
         userRepository.save(user);
 
         String accessToken = jwtUtil.generateAccessToken(user.getUsername());
         String refreshToken = jwtUtil.generateRefreshToken(user.getUsername());
 
-        return new AuthResponse(accessToken, refreshToken);
+        return new AuthResponse(accessToken, refreshToken, Math.toIntExact(user.getId()), user.getUsername());
     }
 
     /**
@@ -66,8 +67,9 @@ public class AuthService {
 
         String accessToken = jwtUtil.generateAccessToken(loginRequest.getUsername());
         String refreshToken = jwtUtil.generateRefreshToken(loginRequest.getUsername());
-
-        return new AuthResponse(accessToken, refreshToken);
+        User user = userRepository.findByUsername(loginRequest.getUsername()).orElseThrow();
+        String userName = user.getUsername();
+        return new AuthResponse(accessToken, refreshToken, Math.toIntExact(user.getId()), userName);
     }
 
     /**
@@ -77,8 +79,10 @@ public class AuthService {
         if (jwtUtil.validateRefreshToken(refreshToken)) {
             String username = jwtUtil.extractUsernameFromRefresh(refreshToken);
             String newAccessToken = jwtUtil.generateAccessToken(username);
+            User user = userRepository.findByUsername(username).orElseThrow();
+
             // return same refresh token (still valid) with new access token
-            return new AuthResponse(newAccessToken, refreshToken);
+            return new AuthResponse(newAccessToken, refreshToken, Math.toIntExact(user.getId()), user.getUsername());
         } else {
             throw new IllegalArgumentException("Invalid or expired refresh token");
         }
