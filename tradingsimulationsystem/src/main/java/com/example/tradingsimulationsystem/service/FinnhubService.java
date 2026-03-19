@@ -2,6 +2,8 @@ package com.example.tradingsimulationsystem.service;
 
 import com.example.tradingsimulationsystem.dto.FinnhubSymbol;
 import com.example.tradingsimulationsystem.dto.StockQuote;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.stereotype.Service;
@@ -13,6 +15,9 @@ import java.util.Map;
 
 @Service
 public class FinnhubService {
+
+    private static final Logger logger = LoggerFactory.getLogger(FinnhubService.class);
+    private static final Logger auditLogger = LoggerFactory.getLogger("com.example.tradingsimulationsystem.audit");
 
     private final WebClient webClient;
     private final String finnhubApiKey;
@@ -31,22 +36,38 @@ public class FinnhubService {
         this.finnhubApiKey = finnhubApiKey;
     }
 
+    /**
+     * Fetch all symbols for a given exchange.
+     */
     public List<FinnhubSymbol> getSymbols(String exchange) {
-        return webClient.get()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/api/v1/stock/symbol")
-                        .queryParam("exchange", exchange)
-                        .queryParam("token", finnhubApiKey)
-                        .build())
-                .retrieve()
-                .bodyToFlux(FinnhubSymbol.class)
-                .collectList()
-                .block();
+        logger.info("Fetching symbols for exchange={}", exchange);
+        try {
+            List<FinnhubSymbol> symbols = webClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/api/v1/stock/symbol")
+                            .queryParam("exchange", exchange)
+                            .queryParam("token", finnhubApiKey)
+                            .build())
+                    .retrieve()
+                    .bodyToFlux(FinnhubSymbol.class)
+                    .collectList()
+                    .block();
+
+            logger.info("Retrieved {} symbols for exchange={}", symbols != null ? symbols.size() : 0, exchange);
+            return symbols;
+        } catch (Exception e) {
+            logger.error("Error fetching symbols for exchange={}", exchange, e);
+            return null;
+        }
     }
 
+    /**
+     * Fetch real-time stock quote for a symbol.
+     */
     public StockQuote getQuote(String symbol) {
+        logger.info("Fetching quote for symbol={}", symbol);
         try {
-            return webClient.get()
+            StockQuote quote = webClient.get()
                     .uri(uriBuilder -> uriBuilder
                             .path("/api/v1/quote")
                             .queryParam("symbol", symbol)
@@ -55,15 +76,26 @@ public class FinnhubService {
                     .retrieve()
                     .bodyToMono(StockQuote.class)
                     .block();
+
+            if (quote != null) {
+                logger.info("Quote fetched successfully for symbol={}, currentPrice={}", symbol, quote.getC());
+            } else {
+                logger.warn("Quote response was null for symbol={}", symbol);
+            }
+            return quote;
         } catch (Exception e) {
-            System.err.println("Error fetching quote for " + symbol + ": " + e.getMessage());
+            logger.error("Error fetching quote for symbol={}", symbol, e);
             return null;
         }
     }
 
+    /**
+     * Fetch historical candle data for a symbol.
+     */
     public Map<String, Object> getStockCandle(String symbol, String resolution, long from, long to) {
+        logger.info("Fetching candle data for symbol={}, resolution={}, from={}, to={}", symbol, resolution, from, to);
         try {
-            return webClient.get()
+            Map<String, Object> candleData = webClient.get()
                     .uri(uriBuilder -> uriBuilder
                             .path("/api/v1/stock/candle")
                             .queryParam("symbol", symbol)
@@ -75,8 +107,15 @@ public class FinnhubService {
                     .retrieve()
                     .bodyToMono(Map.class)
                     .block();
+
+            if (candleData != null) {
+                logger.info("Candle data fetched successfully for symbol={}, resolution={}", symbol, resolution);
+            } else {
+                logger.warn("Candle data response was null for symbol={}", symbol);
+            }
+            return candleData;
         } catch (Exception e) {
-            System.err.println("Error fetching candle data for " + symbol + ": " + e.getMessage());
+            logger.error("Error fetching candle data for symbol={}", symbol, e);
             return null;
         }
     }

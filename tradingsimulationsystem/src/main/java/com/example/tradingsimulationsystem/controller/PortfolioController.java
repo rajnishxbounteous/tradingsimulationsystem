@@ -6,6 +6,8 @@ import com.example.tradingsimulationsystem.dto.PortfolioDTO;
 import com.example.tradingsimulationsystem.dto.BuyRequest;
 import com.example.tradingsimulationsystem.dto.SellRequest;
 import com.example.tradingsimulationsystem.service.PortfolioService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,20 +18,21 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/portfolio")
 public class PortfolioController {
 
+    private static final Logger logger = LoggerFactory.getLogger(PortfolioController.class);
+    private static final Logger auditLogger = LoggerFactory.getLogger("com.trading.simulation.audit");
+
     private final PortfolioService portfolioService;
 
     public PortfolioController(PortfolioService portfolioService) {
         this.portfolioService = portfolioService;
     }
 
-    /**
-     * Fetch all portfolio holdings for a user.
-     * Example: GET /api/portfolio/{userId}
-     */
     @GetMapping("/{userId}")
     public List<PortfolioDTO> getUserPortfolio(@PathVariable Long userId) {
+        logger.info("Fetching portfolio for userId={}", userId);
         User user = portfolioService.refreshUser(userId);
         List<UserPortfolio> portfolios = portfolioService.getUserPortfolio(user);
+        auditLogger.info("User {} viewed portfolio holdings", userId);
 
         return portfolios.stream()
                 .map(p -> new PortfolioDTO(
@@ -43,63 +46,59 @@ public class PortfolioController {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Fetch current balance of a user.
-     * Example: GET /api/portfolio/{userId}/balance
-     */
     @GetMapping("/{userId}/balance")
     public double getUserBalance(@PathVariable Long userId) {
+        logger.info("Fetching balance for userId={}", userId);
         User user = portfolioService.refreshUser(userId);
-        return portfolioService.getUserBalance(user);
+        double balance = portfolioService.getUserBalance(user);
+        auditLogger.info("User {} viewed balance: {}", userId, balance);
+        return balance;
     }
 
-    /**
-     * Fetch margin status of a user.
-     * Example: GET /api/portfolio/{userId}/margin
-     */
     @GetMapping("/{userId}/margin")
     public String getMarginStatus(@PathVariable Long userId) {
+        logger.info("Fetching margin status for userId={}", userId);
         User user = portfolioService.refreshUser(userId);
-        return portfolioService.getMarginStatus(user);
+        String marginStatus = portfolioService.getMarginStatus(user);
+        auditLogger.info("User {} viewed margin status: {}", userId, marginStatus);
+        return marginStatus;
     }
 
-    /**
-     * Buy stocks for a user.
-     * Example: POST /api/portfolio/{userId}/buy
-     * Body: { "symbol": "AAPL", "quantity": 10 }
-     */
     @PostMapping("/{userId}/buy")
     public ResponseEntity<?> buyStock(@PathVariable Long userId,
                                       @RequestBody BuyRequest buyRequest) {
+        logger.info("Buy request: userId={}, symbol={}, qty={}", userId, buyRequest.getSymbol(), buyRequest.getQuantity());
         try {
             User user = portfolioService.refreshUser(userId);
             portfolioService.buyStock(user, buyRequest.getSymbol(), buyRequest.getQuantity());
+            logger.info("Buy successful for userId={}, symbol={}, qty={}", userId, buyRequest.getSymbol(), buyRequest.getQuantity());
+            auditLogger.info("User {} bought {} shares of {}", userId, buyRequest.getQuantity(), buyRequest.getSymbol());
             return ResponseEntity.ok("Stock purchased successfully");
         } catch (IllegalArgumentException e) {
+            logger.warn("Buy failed for userId={} - {}", userId, e.getMessage());
             return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
+            logger.error("Unexpected error during buy for userId={}", userId, e);
             return ResponseEntity.internalServerError().body("Purchase failed: " + e.getMessage());
         }
     }
 
-    /**
-     * Sell stocks for a user.
-     * Example: POST /api/portfolio/{userId}/sell
-     * Body: { "symbol": "AAPL", "quantity": 5 }
-     */
     @PostMapping("/{userId}/sell")
     public ResponseEntity<?> sellStock(@PathVariable Long userId,
                                        @RequestBody SellRequest sellRequest) {
+        logger.info("Sell request: userId={}, symbol={}, qty={}", userId, sellRequest.getSymbol(), sellRequest.getQuantity());
         try {
             User user = portfolioService.refreshUser(userId);
             portfolioService.sellStock(user, sellRequest.getSymbol(), sellRequest.getQuantity());
+            logger.info("Sell successful for userId={}, symbol={}, qty={}", userId, sellRequest.getSymbol(), sellRequest.getQuantity());
+            auditLogger.info("User {} sold {} shares of {}", userId, sellRequest.getQuantity(), sellRequest.getSymbol());
             return ResponseEntity.ok("Stock sold successfully");
         } catch (IllegalArgumentException e) {
+            logger.warn("Sell failed for userId={} - {}", userId, e.getMessage());
             return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
+            logger.error("Unexpected error during sell for userId={}", userId, e);
             return ResponseEntity.internalServerError().body("Sale failed: " + e.getMessage());
         }
     }
-
-
 }

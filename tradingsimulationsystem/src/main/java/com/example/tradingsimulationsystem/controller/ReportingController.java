@@ -9,6 +9,8 @@ import com.example.tradingsimulationsystem.mapper.TradeMapper;
 import com.example.tradingsimulationsystem.repository.TradeResultRepository;
 import com.example.tradingsimulationsystem.repository.UserRepository;
 import com.example.tradingsimulationsystem.service.PortfolioService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,6 +21,9 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/report")
 public class ReportingController {
+
+    private static final Logger logger = LoggerFactory.getLogger(ReportingController.class);
+    private static final Logger auditLogger = LoggerFactory.getLogger("com.trading.simulation.audit");
 
     private final TradeResultRepository tradeResultRepository;
     private final UserRepository userRepository;
@@ -32,10 +37,6 @@ public class ReportingController {
         this.portfolioService = portfolioService;
     }
 
-    /**
-     * Get all trades executed by a user, optionally filtered by date range.
-     * Example: GET /api/report/trades/{userId}?from=2026-03-01T00:00:00&to=2026-03-15T23:59:59
-     */
     @GetMapping("/trades/{userId}")
     public List<TradeResultDTO> getTradeHistory(
             @PathVariable Long userId,
@@ -44,12 +45,16 @@ public class ReportingController {
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to) {
 
+        logger.info("Fetching trade history for userId={}, from={}, to={}", userId, from, to);
+
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+                .orElseThrow(() -> {
+                    logger.warn("User not found: {}", userId);
+                    return new IllegalArgumentException("User not found: " + userId);
+                });
 
         List<TradeResult> trades = tradeResultRepository.findByBuyerOrSeller(user, user);
 
-        // Apply date range filter if provided
         if (from != null) {
             trades = trades.stream()
                     .filter(t -> !t.getTimestamp().isBefore(from))
@@ -61,19 +66,23 @@ public class ReportingController {
                     .collect(Collectors.toList());
         }
 
+        logger.info("Retrieved {} trades for userId={}", trades.size(), userId);
+        auditLogger.info("User {} viewed trade history", userId);
+
         return trades.stream()
                 .map(TradeMapper::toDTO)
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Get profit/loss summary for a user.
-     * Example: GET /api/report/pnl/{userId}
-     */
     @GetMapping("/pnl/{userId}")
     public double getProfitLoss(@PathVariable Long userId) {
+        logger.info("Fetching PnL for userId={}", userId);
+
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+                .orElseThrow(() -> {
+                    logger.warn("User not found: {}", userId);
+                    return new IllegalArgumentException("User not found: " + userId);
+                });
 
         List<UserPortfolio> portfolios = portfolioService.getUserPortfolio(user);
 
@@ -84,19 +93,25 @@ public class ReportingController {
         double totalBalance = user.getBalance();
         double marginUsed = user.getMarginUsed();
 
-        return portfolioValue + totalBalance - marginUsed;
+        double pnl = portfolioValue + totalBalance - marginUsed;
+        logger.info("PnL for userId={} calculated as {}", userId, pnl);
+        auditLogger.info("User {} viewed PnL summary", userId);
+
+        return pnl;
     }
 
-    /**
-     * Get portfolio performance summary for a user.
-     * Example: GET /api/report/portfolio/{userId}
-     */
     @GetMapping("/portfolio/{userId}")
     public List<PortfolioDTO> getPortfolioSummary(@PathVariable Long userId) {
+        logger.info("Fetching portfolio summary for userId={}", userId);
+
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+                .orElseThrow(() -> {
+                    logger.warn("User not found: {}", userId);
+                    return new IllegalArgumentException("User not found: " + userId);
+                });
 
         List<UserPortfolio> portfolios = portfolioService.getUserPortfolio(user);
+        auditLogger.info("User {} viewed portfolio summary", userId);
 
         return portfolios.stream()
                 .map(p -> new PortfolioDTO(

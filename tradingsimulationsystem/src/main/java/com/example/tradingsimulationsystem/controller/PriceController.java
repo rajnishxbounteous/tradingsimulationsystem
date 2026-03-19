@@ -3,6 +3,8 @@ package com.example.tradingsimulationsystem.controller;
 import com.example.tradingsimulationsystem.domain.Stock;
 import com.example.tradingsimulationsystem.dto.StockDTO;
 import com.example.tradingsimulationsystem.repository.StockRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -11,6 +13,8 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/prices")
 public class PriceController {
+
+    private static final Logger logger = LoggerFactory.getLogger(PriceController.class);
 
     private final StockRepository stockRepository;
 
@@ -24,7 +28,10 @@ public class PriceController {
      */
     @GetMapping
     public List<StockDTO> getAllPrices() {
+        logger.info("Fetching all stock prices");
         List<Stock> stocks = stockRepository.findAll();
+        logger.info("Retrieved {} stocks from repository", stocks.size());
+
         return stocks.stream()
                 .map(s -> new StockDTO(
                         s.getSymbol(),
@@ -47,8 +54,15 @@ public class PriceController {
      */
     @GetMapping("/{symbol}")
     public StockDTO getPriceBySymbol(@PathVariable String symbol) {
+        logger.info("Fetching price for symbol={}", symbol);
+
         Stock stock = stockRepository.findBySymbol(symbol)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid stock symbol: " + symbol));
+                .orElseThrow(() -> {
+                    logger.warn("Invalid stock symbol requested: {}", symbol);
+                    return new IllegalArgumentException("Invalid stock symbol: " + symbol);
+                });
+
+        logger.info("Price retrieved successfully for symbol={}", symbol);
 
         return new StockDTO(
                 stock.getSymbol(),

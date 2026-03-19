@@ -5,9 +5,9 @@ import com.example.tradingsimulationsystem.dto.StockDTO;
 import com.example.tradingsimulationsystem.dto.MarketSummaryDTO;
 import com.example.tradingsimulationsystem.dto.NewsDTO;
 import com.example.tradingsimulationsystem.service.MarketService;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -15,56 +15,44 @@ import java.util.List;
 @RequestMapping("/api/market")
 public class MarketController {
 
+    private static final Logger logger = LoggerFactory.getLogger(MarketController.class);
+
     private final MarketService marketService;
 
     public MarketController(MarketService marketService) {
         this.marketService = marketService;
     }
 
-    /**
-     * Endpoint to check if the market is open.
-     * Example: GET /api/market/status
-     */
     @GetMapping("/status")
     public MarketStatusDTO getMarketStatus() {
+        logger.info("Market status requested");
         boolean isOpen = marketService.isMarketOpen();
         String message = marketService.getMarketStatusMessage();
+        logger.info("Market status retrieved: {}", message);
         return new MarketStatusDTO(isOpen, message);
     }
 
-    /**
-     * Endpoint to get top gainers.
-     * Example: GET /api/market/top-gainers
-     */
     @GetMapping("/top-gainers")
     public List<StockDTO> getTopGainers() {
+        logger.info("Top gainers of the market requested");
         return marketService.getTopGainers();
     }
 
-    /**
-     * Endpoint to get top losers.
-     * Example: GET /api/market/top-losers
-     */
     @GetMapping("/top-losers")
     public List<StockDTO> getTopLosers() {
+        logger.info("Top losers of the market requested");
         return marketService.getTopLosers();
     }
 
-    /**
-     * Endpoint to get overall market summary.
-     * Example: GET /api/market/summary
-     */
     @GetMapping("/summary")
     public MarketSummaryDTO getMarketSummary() {
+        logger.info("Market summary requested by user.");
         return marketService.getMarketSummary();
     }
 
-    /**
-     * Endpoint to get latest market news.
-     * Example: GET /api/market/news
-     */
     @GetMapping("/news")
     public List<NewsDTO> getMarketNews() {
+        logger.info("Market news requested by user");
         return marketService.getMarketNews();
     }
 }

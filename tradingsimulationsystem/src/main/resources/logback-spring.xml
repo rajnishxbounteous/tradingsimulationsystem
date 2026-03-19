@@ -38,17 +38,19 @@
 
     <!-- Package-specific loggers -->
     <!-- Controllers: user actions -->
-    <logger name="com.trading.simulation.controller" level="INFO" additivity="false">
+    <logger name="com.example.tradingsimulationsystem.controller" level="INFO" additivity="false">
         <appender-ref ref="CONSOLE"/>
+        <appender-ref ref = "FILE"/>
     </logger>
 
     <!-- Services: business logic -->
-    <logger name="com.trading.simulation.service" level="DEBUG" additivity="false">
+    <logger name="com.example.tradingsimulationsystem.service" level="DEBUG" additivity="false">
         <appender-ref ref="FILE"/>
+        <appender-ref ref="CONSOLE"/>
     </logger>
 
     <!-- Audit trail -->
-    <logger name="com.trading.simulation.audit" level="INFO" additivity="false">
+    <logger name="com.example.tradingsimulationsystem.audit" level="INFO" additivity="false">
         <appender-ref ref="AUDIT"/>
     </logger>
 
